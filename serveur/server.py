@@ -187,7 +187,6 @@ HTML_TEMPLATE = """
     <title>TP2 IoT - Tableau de bord</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="refresh" content="30">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -238,10 +237,22 @@ HTML_TEMPLATE = """
             font-size: 0.92rem;
         }
 
-        .topbar a {
+        .topbar a,
+        .topbar .topbar-link {
             color: var(--accent-2);
             text-decoration: none;
             font-weight: 600;
+            font-family: inherit;
+            line-height: inherit;
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.92rem;
+            min-width: 0;
+            appearance: none;
+            -webkit-appearance: none;
         }
 
         h1 {
@@ -379,11 +390,56 @@ HTML_TEMPLATE = """
 
         button:hover { filter: brightness(1.04); }
 
+        .danger-btn {
+            background: linear-gradient(135deg, #b91c1c, #ef4444);
+        }
+
+        .icon-btn {
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        .icon-btn svg {
+            width: 19px;
+            height: 19px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
         .help {
             color: var(--muted);
             font-size: 0.88rem;
             margin: 10px 0 0;
             line-height: 1.5;
+        }
+
+        .actions-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         @keyframes fadein {
@@ -395,6 +451,7 @@ HTML_TEMPLATE = """
             .sensor-grid, .charts { grid-template-columns: 1fr; }
             .form-row { grid-template-columns: 1fr; }
             button { width: 100%; }
+            .icon-btn { width: 42px !important; }
             table { min-width: 100%; }
         }
     </style>
@@ -403,23 +460,29 @@ HTML_TEMPLATE = """
     <div class="container">
         <div class="topbar">
             <div>Connecte: <strong>admin</strong></div>
-            <a href="/logout">Deconnexion</a>
+            <div class="actions-row" style="margin-top: 0;">
+                <form action="/reset-historique" method="post" onsubmit="return confirm('Supprimer tout l\\'historique ?');">
+                    <button type="submit" class="topbar-link">Supprimer l'historique</button>
+                </form>
+                <span aria-hidden="true">|</span>
+                <a href="/logout">Deconnexion</a>
+            </div>
         </div>
 
         <h1>TP2 IoT - Tableau de bord</h1>
 
         <div class="sensor-grid">
             <div class="sensor">
-                <h3>Arduino 1 - Luminosite (LDR)</h3>
-                <p class="metric">{{ val1 if val1 else 'Aucune donnee' }}</p>
-                <p class="meta">Derniere mise a jour: {{ time1 }}</p>
+                <h3>Arduino 1 - Luminosité (LDR)</h3>
+                <p class="metric" id="valeur-arduino1">{{ val1 if val1 else 'Aucune donnée' }}</p>
+                <p class="meta">Dernière mise a jour: <span id="time-arduino1">{{ time1 }}</span></p>
                 <p class="meta">Consigne LED: <strong>{{ consigne1 }}</strong></p>
             </div>
 
             <div class="sensor">
-                <h3>Arduino 2 - Temperature (TMP36)</h3>
-                <p class="metric">{{ val2 if val2 else 'Aucune donnee' }} degC</p>
-                <p class="meta">Derniere mise a jour: {{ time2 }}</p>
+                <h3>Arduino 2 - Température (TMP36)</h3>
+                <p class="metric" id="valeur-arduino2">{{ val2 if val2 else 'Aucune donnée' }} degC</p>
+                <p class="meta">Dernière mise a jour: <span id="time-arduino2">{{ time2 }}</span></p>
                 <p class="meta">Consigne LED: <strong>{{ consigne2 }}</strong></p>
             </div>
         </div>
@@ -427,21 +490,21 @@ HTML_TEMPLATE = """
         <h2>Graphiques des mesures</h2>
         <div class="charts">
             <div class="chart-card">
-                <h3>Arduino 1 - Luminosite</h3>
+                <h3>Arduino 1 - Luminosité</h3>
                 <div class="chart-wrap">
                     <canvas id="chartArduino1"></canvas>
                 </div>
             </div>
 
             <div class="chart-card">
-                <h3>Arduino 2 - Temperature</h3>
+                <h3>Arduino 2 - Température</h3>
                 <div class="chart-wrap">
                     <canvas id="chartArduino2"></canvas>
                 </div>
             </div>
         </div>
 
-        <h2>Historique (20 dernieres mesures)</h2>
+        <h2>Historique (20 dernières mesures)</h2>
         <div class="table-panel">
             <table>
                 <tr>
@@ -450,6 +513,7 @@ HTML_TEMPLATE = """
                     <th>Valeur</th>
                     <th>Date/Heure</th>
                 </tr>
+                <tbody id="history-body">
                 {% for row in historique %}
                 <tr>
                     <td>{{ row["id"] }}</td>
@@ -462,6 +526,7 @@ HTML_TEMPLATE = """
                     <td>{{ row["timestamp_humain"] }}</td>
                 </tr>
                 {% endfor %}
+                </tbody>
             </table>
         </div>
 
@@ -470,11 +535,17 @@ HTML_TEMPLATE = """
             <form action="/consigne" method="post">
                 <div class="form-row">
                     <select name="arduino_id" required>
-                        <option value="arduino1">Arduino 1 (Photorésistance)</option>
+                        <option value="arduino1">Arduino 1 (Luminosité)</option>
                         <option value="arduino2">Arduino 2 (Température)</option>
                     </select>
-                    <input type="text" name="valeur" placeholder="Ex: ON, OFF, AUTO, RED..." required>
-                    <button type="submit">Envoyer</button>
+                    <input type="text" name="valeur" placeholder="Entrer une commande..." required>
+                    <button type="submit" class="icon-btn" title="Envoyer la consigne" aria-label="Envoyer la consigne">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M22 2L11 13"></path>
+                            <path d="M22 2L15 22l-4-9-9-4 20-7z"></path>
+                        </svg>
+                        <span class="sr-only">Envoyer la consigne</span>
+                    </button>
                 </div>
                 <p class="help"></br> - Arduino 1: AUTO / ON / OFF </br> - Arduino 2: AUTO / OFF / RED / GREEN / BLUE</p>
             </form>
@@ -490,9 +561,9 @@ HTML_TEMPLATE = """
         function buildChart(canvasId, labels, data, label, color) {
             if (typeof Chart === "undefined") return;
             const ctx = document.getElementById(canvasId);
-            if (!ctx || data.length === 0) return;
+            if (!ctx) return;
 
-            new Chart(ctx, {
+            return new Chart(ctx, {
                 type: "line",
                 data: {
                     labels: labels,
@@ -527,8 +598,100 @@ HTML_TEMPLATE = """
             });
         }
 
-        buildChart("chartArduino1", labelsArduino1, valuesArduino1, "Luminosite", "#f59e0b");
-        buildChart("chartArduino2", labelsArduino2, valuesArduino2, "Temperature (degC)", "#0ea5e9");
+        const chartArduino1 = buildChart("chartArduino1", labelsArduino1, valuesArduino1, "Luminosité", "#f59e0b");
+        const chartArduino2 = buildChart("chartArduino2", labelsArduino2, valuesArduino2, "Température", "#0ea5e9");
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function shortTime(label) {
+            if (!label) return "";
+            const parts = String(label).split(" ");
+            return parts.length > 1 ? parts[1] : parts[0];
+        }
+
+        function toNumber(value) {
+            const parsed = Number(String(value).replace(",", "."));
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function splitSeries(rows, arduinoId) {
+            const labels = [];
+            const values = [];
+            const ordered = rows.filter((row) => row.arduino_id === arduinoId).slice().reverse();
+            for (const row of ordered) {
+                const numeric = toNumber(row.valeur);
+                if (numeric === null) continue;
+                labels.push(shortTime(row.timestamp_humain));
+                values.push(numeric);
+            }
+            return { labels, values };
+        }
+
+        function updateChart(chart, rows, arduinoId) {
+            if (!chart) return;
+            const series = splitSeries(rows, arduinoId);
+            chart.data.labels = series.labels;
+            chart.data.datasets[0].data = series.values;
+            chart.update("none");
+        }
+
+        function updateTopCards(rows) {
+            const latest1 = rows.find((row) => row.arduino_id === "arduino1");
+            const latest2 = rows.find((row) => row.arduino_id === "arduino2");
+
+            const v1 = document.getElementById("valeur-arduino1");
+            const t1 = document.getElementById("time-arduino1");
+            const v2 = document.getElementById("valeur-arduino2");
+            const t2 = document.getElementById("time-arduino2");
+
+            v1.textContent = latest1 ? latest1.valeur : "Aucune donnée";
+            t1.textContent = latest1 ? latest1.timestamp_humain : "Jamais";
+            v2.textContent = latest2 ? `${latest2.valeur} degC` : "Aucune donnée degC";
+            t2.textContent = latest2 ? latest2.timestamp_humain : "Jamais";
+        }
+
+        function updateHistory(rows) {
+            const body = document.getElementById("history-body");
+            if (!body) return;
+            const lines = rows.slice(0, 20).map((row) => {
+                const isA1 = row.arduino_id === "arduino1";
+                const label = isA1 ? "Luminosite" : "Temperature";
+                const badge = isA1 ? "ard1" : "ard2";
+                return `
+                    <tr>
+                        <td>${escapeHtml(row.id)}</td>
+                        <td><span class="badge ${badge}">${label}</span></td>
+                        <td>${escapeHtml(row.valeur)}</td>
+                        <td>${escapeHtml(row.timestamp_humain)}</td>
+                    </tr>
+                `;
+            });
+            body.innerHTML = lines.join("");
+        }
+
+        async function refreshDashboard() {
+            try {
+                const response = await fetch("/api/data?limit=80", { cache: "no-store" });
+                if (!response.ok) return;
+                const rows = await response.json();
+                updateTopCards(rows);
+                updateHistory(rows);
+                updateChart(chartArduino1, rows, "arduino1");
+                updateChart(chartArduino2, rows, "arduino2");
+            } catch (error) {
+                console.error("Echec refresh dashboard:", error);
+            }
+        }
+
+        setInterval(refreshDashboard, 3000);
+        setTimeout(refreshDashboard, 1000);
     </script>
 </body>
 </html>
@@ -601,6 +764,18 @@ def web_consigne():
         cmd = normaliser_consigne(arduino_id, valeur)
         if cmd:
             consignes[arduino_id] = cmd
+    return '<script>window.location="/"</script>'
+
+
+@app.route("/reset-historique", methods=["POST"])
+def reset_historique():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM mesures")
+    c.execute("DELETE FROM sqlite_sequence WHERE name='mesures'")
+    conn.commit()
+    conn.close()
+    print("[DB] Historique supprime via interface web")
     return '<script>window.location="/"</script>'
 
 
