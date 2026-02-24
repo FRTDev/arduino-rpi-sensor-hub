@@ -473,15 +473,15 @@ HTML_TEMPLATE = """
 
         <div class="sensor-grid">
             <div class="sensor">
-                <h3>Arduino 1 - Luminosité (LDR)</h3>
+                <h3>Arduino 1 - Luminosité</h3>
                 <p class="metric" id="valeur-arduino1">{{ val1 if val1 else 'Aucune donnée' }}</p>
                 <p class="meta">Dernière mise a jour: <span id="time-arduino1">{{ time1 }}</span></p>
                 <p class="meta">Consigne LED: <strong>{{ consigne1 }}</strong></p>
             </div>
 
             <div class="sensor">
-                <h3>Arduino 2 - Température (TMP36)</h3>
-                <p class="metric" id="valeur-arduino2">{{ val2 if val2 else 'Aucune donnée' }} degC</p>
+                <h3>Arduino 2 - Température</h3>
+                <p class="metric" id="valeur-arduino2">{{ val2 if val2 else 'Aucune donnée' }}</p>
                 <p class="meta">Dernière mise a jour: <span id="time-arduino2">{{ time2 }}</span></p>
                 <p class="meta">Consigne LED: <strong>{{ consigne2 }}</strong></p>
             </div>
@@ -558,7 +558,7 @@ HTML_TEMPLATE = """
         const labelsArduino2 = {{ labels_arduino2 | tojson }};
         const valuesArduino2 = {{ values_arduino2 | tojson }};
 
-        function buildChart(canvasId, labels, data, label, color) {
+        function buildChart(canvasId, labels, data, label, color, yMax = null, forcedYTicks = null) {
             if (typeof Chart === "undefined") return;
             const ctx = document.getElementById(canvasId);
             if (!ctx) return;
@@ -591,6 +591,10 @@ HTML_TEMPLATE = """
                         },
                         y: {
                             beginAtZero: true,
+                            max: yMax,
+                            afterBuildTicks: forcedYTicks ? (axis) => {
+                                axis.ticks = forcedYTicks.map((value) => ({ value }));
+                            } : undefined,
                             grid: { color: "rgba(148, 163, 184, 0.25)" }
                         }
                     }
@@ -598,8 +602,24 @@ HTML_TEMPLATE = """
             });
         }
 
-        const chartArduino1 = buildChart("chartArduino1", labelsArduino1, valuesArduino1, "Luminosité", "#f59e0b");
-        const chartArduino2 = buildChart("chartArduino2", labelsArduino2, valuesArduino2, "Température", "#0ea5e9");
+        const chartArduino1 = buildChart(
+            "chartArduino1",
+            labelsArduino1,
+            valuesArduino1,
+            "Luminosité",
+            "#f59e0b",
+            1000,
+            [0, 200, 400, 600, 800, 1000]
+        );
+        const chartArduino2 = buildChart(
+            "chartArduino2",
+            labelsArduino2,
+            valuesArduino2,
+            "Température",
+            "#0ea5e9",
+            35,
+            [0, 5, 10, 15, 20, 25, 30, 35]
+        );
 
         function escapeHtml(value) {
             return String(value)
@@ -653,7 +673,7 @@ HTML_TEMPLATE = """
 
             v1.textContent = latest1 ? latest1.valeur : "Aucune donnée";
             t1.textContent = latest1 ? latest1.timestamp_humain : "Jamais";
-            v2.textContent = latest2 ? `${latest2.valeur} degC` : "Aucune donnée degC";
+            v2.textContent = latest2 ? `${latest2.valeur} °C` : "Aucune donnée °C";
             t2.textContent = latest2 ? latest2.timestamp_humain : "Jamais";
         }
 
