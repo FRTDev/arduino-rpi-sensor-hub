@@ -18,7 +18,7 @@ void loop()
 
   autoTune();
 
-  analogWrite(ledPin, lightLevel);
+  analogWrite(ledPin, 255 - lightLevel);
 
 }
 
