@@ -71,8 +71,9 @@ void setup() {
 void loop() {
   if (modeAuto) {
     appliquerLedAuto();
-    appliquerLed();
   }
+  // Reapplique en continu l'etat LED (AUTO ou manuel ON/OFF).
+  appliquerLed();
 
   if (Serial.available()) {
     String commande = Serial.readStringUntil('\n');

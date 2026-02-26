@@ -80,7 +80,14 @@ class RaspberryGateway:
             }
             headers = {"X-API-Key": GATEWAY_API_KEY}
             r = requests.post(f"{SERVER_URL}/api/data", json=payload, headers=headers, timeout=5)
-            print(f"[OK] {arduino_id}: {valeur} -> serveur ({r.status_code})")
+            if 200 <= r.status_code < 300:
+                print(f"[OK] {arduino_id}: {valeur} -> serveur ({r.status_code})")
+            else:
+                body = r.text.strip().replace("\n", " ")
+                print(
+                    f"[ERREUR] POST /api/data {arduino_id}={valeur} "
+                    f"status={r.status_code} body={body}"
+                )
         except requests.exceptions.ConnectionError:
             print(f"[ERREUR] Serveur inaccessible sur {SERVER_URL} (POST /api/data)")
         except Exception as e:
