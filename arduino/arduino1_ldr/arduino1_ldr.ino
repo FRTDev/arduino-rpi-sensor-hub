@@ -7,12 +7,14 @@
  *   OFF  -> eteint la LED
  */
 
-const int LDR_PIN = A0;
+const int LDR_PIN = 0;
 const int LED_PIN = 9;
-const int SEUIL_LDR = 500;
+const int SEUIL_LDR = 750;
 
 bool ledAllumee = false;
 bool modeAuto = true;
+
+int lightLevel, high = 0, low = 1023;
 
 void appliquerLedAuto() {
   int valeur = analogRead(LDR_PIN);
@@ -72,7 +74,6 @@ void loop() {
   if (modeAuto) {
     appliquerLedAuto();
   }
-  // Reapplique en continu l'etat LED (AUTO ou manuel ON/OFF).
   appliquerLed();
 
   if (Serial.available()) {
@@ -80,4 +81,42 @@ void loop() {
     traiterCommande(commande);
   }
   delay(50);
+
+  
+  lightLevel = analogRead(LDR_PIN);
+
+  //manualTune();
+
+  autoTune();
+
+  analogWrite(LED_PIN, 255 - lightLevel);
+
+}
+
+
+void manualTune()
+{
+
+  lightLevel = map(lightLevel, 0, 1023, 0, 255);
+  lightLevel = constrain(lightLevel, 0, 255);
+
+} 
+
+
+void autoTune()
+{
+
+  if (lightLevel < low)
+  {
+    low = lightLevel;
+  }
+
+  if (lightLevel > high)
+  {
+    high = lightLevel;
+  }
+
+  lightLevel = map(lightLevel, low+30, high-30, 0, 255);
+  lightLevel = constrain(lightLevel, 0, 255);
+
 }
