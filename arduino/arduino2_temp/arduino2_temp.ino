@@ -6,7 +6,7 @@
  *   OFF/RED/GREEN/BLUE -> couleur forcee
  */
 
-const int TEMP_PIN = A0;
+const int TEMP_PIN = 0;
 const int RED_PIN = 9;
 const int GREEN_PIN = 10;
 const int BLUE_PIN = 11;
