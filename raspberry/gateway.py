@@ -14,7 +14,9 @@ SERIAL_ARD1 = "/dev/ttyUSB0"
 SERIAL_ARD2 = "/dev/ttyUSB1"
 BUTTON_PIN = 4
 PERIOD_SECONDS = 120
-GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "gateway2026")
+GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY")
+if not GATEWAY_API_KEY:
+    raise RuntimeError("Required environment variable is missing: GATEWAY_API_KEY")
 
 
 class RaspberryGateway:
