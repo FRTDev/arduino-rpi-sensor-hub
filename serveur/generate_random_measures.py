@@ -56,8 +56,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--api-key",
-        default=os.environ.get("GATEWAY_API_KEY", "gateway2026"),
-        help="Cle API gateway (defaut: env GATEWAY_API_KEY ou gateway2026)",
+        default=os.environ.get("GATEWAY_API_KEY"),
+        help="Cle API gateway (defaut: env GATEWAY_API_KEY)",
     )
     parser.add_argument(
         "--count",
@@ -72,6 +72,8 @@ def main() -> int:
         help="Pause en secondes entre envois (defaut: %(default)s)",
     )
     args = parser.parse_args()
+    if not args.api_key:
+        parser.error("--api-key or GATEWAY_API_KEY is required")
 
     ok = 0
     fail = 0

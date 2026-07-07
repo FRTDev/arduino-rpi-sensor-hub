@@ -8,15 +8,27 @@ from datetime import datetime
 import os
 import sqlite3
 
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, redirect, render_template_string, request, url_for
 from flask_httpauth import HTTPBasicAuth
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "iot_data.db")
-UTILISATEURS = {"admin": "iot2026"}
-GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "gateway2026")
+def required_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"Required environment variable is missing: {name}")
+    return value
+
+
+DB_PATH = os.environ.get(
+    "IOT_DB_PATH",
+    os.path.join(os.path.dirname(__file__), "iot_data.db"),
+)
+UTILISATEURS = {
+    required_env("DASHBOARD_USERNAME"): required_env("DASHBOARD_PASSWORD")
+}
+GATEWAY_API_KEY = required_env("GATEWAY_API_KEY")
 
 consignes = {"arduino1": "AUTO", "arduino2": "AUTO"}
 ARDUINOS = set(consignes.keys())
@@ -788,6 +800,7 @@ def web_consigne():
 
 
 @app.route("/reset-historique", methods=["POST"])
+@auth.login_required
 def reset_historique():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -796,7 +809,7 @@ def reset_historique():
     conn.commit()
     conn.close()
     print("[DB] Historique supprime via interface web")
-    return '<script>window.location="/"</script>'
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/logout")
